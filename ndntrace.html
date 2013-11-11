@@ -1,0 +1,235 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<!-- 
+	NDN Trace Application
+	*This application is a browser based version of ndnx-trace, written by: 
+ 	*Anmol Rajpurohit <anmol.rajpurohit@gmail.com>
+-->
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8">
+
+<style>
+
+  #wrapper{
+    width:100%;
+    height:480px;
+    font:12px arial,sans-serif;
+    line-height:16px;
+  }
+
+  #help{
+    margin-top:1%; 
+    clear:both;
+    margin-left: 5%;
+    width:100%;
+    font:13px arial,sans-serif;
+    line-height:16px;
+  }	
+
+  #ndntrace{
+    width:20%;
+    float:left;
+    margin-left:5%;
+    text-align:right;
+    font-weight:bold;
+  }
+
+  #ndntracer{
+   width:38%;
+   height:70%;
+   float:left;   
+   overflow:auto;
+   margin-bottom:10px;
+   max-height:90%;
+   margin-left:5%;
+   margin-top:1%;   
+   background:#eeeeee;
+   font-size:14px;
+  }
+  
+  #action{
+    width:48%;
+    float:right;
+    margin-right:5%;
+    text-align: center;
+    font-weight:bold;
+  }
+  
+  #display_log {
+    width:50%;
+    height:70%;
+    float:right;
+    overflow:auto;
+    margin-bottom:10px;
+    max-height:90%;
+    margin-right:5%;
+    margin-top:1%;
+    background:#eeeeee;
+    font-size:14px;
+  }
+  
+   #report{
+    margin-top:1%; 
+    clear:both;
+    margin-left: 5%;
+    width:100%;
+    font:13px arial,sans-serif;
+    line-height:16px;
+  }
+  
+</style>
+
+<head>
+	<title>NDN-Trace</title>
+	
+	<script type="text/javascript" src="http://ether.remap.ucla.edu/anmol/ndn-js-master/build/ndn-js.js"></script>
+	<script language="Javascript" src="http://www.codehelper.io/api/ips/?js"></script>
+	<script type="text/javascript">
+		var ndn = new NDN({host: "B.ws.ndn.ucla.edu"});
+        	var ndntraceClosure = function ndntraceClosure() {
+        	// Inherit from Closure.
+			Closure.call(this);
+		};
+		var template = new Interest();
+		ndntraceClosure.prototype.upcall = function(kind, upcallInfo) {
+				document.getElementById('display_log').innerHTML += "&nbsp"+displayTime()+"Upcall executed !".fontcolor("blue").bold()+ "<br />";
+				document.getElementById('display_log').scrollTop = document.getElementById('display_log').scrollHeight;
+			if (kind == Closure.UPCALL_FINAL) {
+				// Do nothing.
+			} else if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
+				var content = upcallInfo.contentObject;
+				nameStr = escape(content.name.getName());
+				var Route = DataUtils.toString(content.content);
+				document.getElementById('display_log').innerHTML += "&nbsp"+displayTime()+"Content Recieved !".fontcolor("brown").bold()+"<br/>";
+				document.getElementById('display_log').scrollTop = document.getElementById('display_log').scrollHeight;
+				var first_char = Route.charAt(4);
+				if(first_char=="#"){
+					if(Route.charAt())
+					if(Route.charAt(30)=="~")
+						var ip1=Route.substring(16,29);
+					else if(Route.charAt(33)=="~")
+						var ip1=Route.substring(20, 29);
+					else
+						var ip1=Route.substring(16,28);
+					var arr = getIndicesOf(ip1, Route,false);
+					for(i=0;i<arr.length;i++){	
+						var part=Route.substring(arr[i],arr[i+1]);
+						var tokens = part.split("~");
+						var str = "&nbsp Route "+ "&nbsp"+ i;
+						document.getElementById('ndntracer').innerHTML += "<br/>"+str.bold()+"<br/>";
+						for(j=0;j<tokens.length;j++)
+						document.getElementById('ndntracer').innerHTML += "&nbsp &nbsp &nbsp"+j+"&nbsp : "+tokens[j]+"<br/>";	
+					}
+					document.getElementById('ndntracer').scrollTop = document.getElementById('ndntracer').scrollHeight;
+				}					
+				else{
+					var str = "&nbsp Route "+ "&nbsp"+ 0;
+					document.getElementById('ndntracer').innerHTML += str.bold()+"<br/>";
+					document.getElementById('ndntracer').innerHTML += "&nbsp &nbsp &nbsp"+0+": "+Route+"\n<br/>";
+					document.getElementById('ndntracer').scrollTop = document.getElementById('ndntracer').scrollHeight;				
+				}		
+			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+				document.getElementById('ndntracer').innerHTML += "&nbsp asked again...waiting for reply<br/>";
+				document.getElementById('ndntracer').scrollTop = document.getElementById('ndntracer').scrollHeight;
+				document.getElementById('display_log').innerHTML += "&nbsp"+displayTime()+"Interest Timed Out !".fontcolor("red").bold()+ "<br />"; 
+       			        document.getElementById('display_log').innerHTML += "&nbsp"+displayTime()+"Interest Reexpressed !".fontcolor("orange").bold()+ "<br />";
+				document.getElementById('display_log').scrollTop = document.getElementById('display_log').scrollHeight;       				
+				return Closure.RESULT_REEXPRESS;
+			}
+			return Closure.RESULT_OK;
+		};
+		
+		function display() {
+			var value = document.getElementById('uri').value;
+			document.getElementById('ndntracer').innerHTML = "<br/>";			
+			document.getElementById('display_log').innerHTML = "<br/>";
+			document.getElementById('error').innerHTML = "";
+			if(value.length == 0){
+				document.getElementById('error').innerHTML = "Please enter URI in the box above!".fontcolor("red").bold();
+				return 0;
+			}
+			var first_char = value.charAt(0);	
+			if(first_char != "/"){
+				var first_four = value.substring(0,4);
+				if(first_four !="ndn:"){
+					
+			    	 	document.getElementById('error').innerHTML = "URI must begin with / or ndn:".fontcolor("red").bold();
+				 	return 0;
+				}
+				else{
+					value=value.substring(4, value.length);	
+				}					
+			}
+			var last_char = value.charAt(value.length-1);
+			if(last_char != '/')
+			value += "/";
+			var rand = Math.floor((Math.random()*1000000)+1);
+			var ip=codehelper_ip.IP;
+			var trace_URI = "/trace"+value+rand+"~"+"/"+ip;			
+			console.log("Trace interest:" + trace_URI);			
+			ndn.expressInterest(new Name(trace_URI), new ndntraceClosure());
+			document.getElementById('display_log').innerHTML += "&nbsp"+displayTime()+"Expressed Interest: ".fontcolor("green").bold()+ trace_URI + "<br />";
+		}
+
+		function getIndicesOf(searchStr, str, caseSensitive) {
+			var startIndex = 0, searchStrLen = searchStr.length;
+			var index, indices = [];
+    			if (!caseSensitive) {
+        			str = str.toLowerCase();
+        			searchStr = searchStr.toLowerCase();
+    			}
+    			while ((index = str.indexOf(searchStr, startIndex)) > -1) {
+        			indices.push(index);
+        			startIndex = index + searchStrLen;
+    			}
+    			return indices;
+		}
+		function displayTime() {
+	    		var str = "";
+	    		var currentTime = new Date()
+	    		var hours = currentTime.getHours()
+	    		var minutes = currentTime.getMinutes()
+	    		var seconds = currentTime.getSeconds()
+		        var milliseconds = currentTime.getMilliseconds(); 
+	    		if (minutes < 10) {
+       				minutes = "0" + minutes;
+        		}
+	    		if (seconds < 10) {
+    				seconds = "0" + seconds;
+	    		}
+	    		if (milliseconds < 10) {
+      				milliseconds = "0" + milliseconds;
+  	    		}	
+    	    		str += hours + ":" + minutes + ":" + seconds + "." + milliseconds + " ";
+    	    		return str;
+		}
+
+
+</script>
+</head>
+<body >
+<div id= "wrapper">
+<div id="help">
+<h3><strong>NDN-Trace</strong></h3>  
+<p> ccnd host: borges.metwi.ucla.edu (via websockets proxy B.ws.ndn.ucla.edu)</p>
+<p font: bold >This application is a browser based version of ndnx-trace </p> 
+<p>The NDN Trace is a tool with traceroute like functionality for NDNx. This tool is written for troubleshooting problems in a network of ndnx nodes. It can trace to a certain NDN URI, e.g, ndn:/ndn/ucla.edu/apps/ping. The tool displays all routes to the namespace and problems at each route, if any. In this process, the tool bypasses the intermediate ndnx caches.</p>
+	<form>
+		Please Enter URI:<br />
+		<input id="uri" type="text" name="URI" size="30" value="/ndn/ucla.edu/apps/ping"></input> <span style="color:red;" id="error" > </span>
+	</form>
+
+	<button id="testBtn" onclick="display()">Display routes to URI</button>
+	
+</div>
+
+<div id="ndntrace"> Result </div>
+<div id="action"> Events </div>
+<div id="ndntracer" name="ndntracer"></div>
+<div id="display_log"></div>
+<div id="report"><p>By Anmol Rajpurohit using <a href="http://github.com/named-data/ndn-js/">NDN-JS</a>.
+Send comments & bugs to <a href="mailto:anmol.rajpurohit@gmail.com">Anmol</a>.</div>
+</div>
+</body>
+</html>
